@@ -14,6 +14,8 @@ services:
     depends_on:
       - web
       - api
+    networks:
+      - gatorplanner
 
   web:
     image: ghcr.io/${GITHUB_OWNER}/gatorplanner-web:${IMAGE_TAG:-latest}
@@ -23,13 +25,15 @@ services:
       PORT: 3000
       HOST: 0.0.0.0
       PUBLIC_API_URL: https://api.${DOMAIN}
+    networks:
+      - gatorplanner
 
   api:
     image: ghcr.io/${GITHUB_OWNER}/gatorplanner-api:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       PORT: 8080
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/db
+      DATABASE_URL: ${DATABASE_URL}
       ELASTICSEARCH_URL: http://elasticsearch:9200
       OPTIMIZER_URL: optimizer:50051
       ALLOWED_ORIGINS: https://${DOMAIN}
@@ -40,6 +44,8 @@ services:
         condition: service_started
       optimizer:
         condition: service_started
+    networks:
+      - gatorplanner
 
   optimizer:
     image: ghcr.io/${GITHUB_OWNER}/gatorplanner-optimizer:${IMAGE_TAG:-latest}
@@ -47,6 +53,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - gatorplanner
 
   postgres:
     image: postgres:18-alpine
@@ -62,6 +70,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - gatorplanner
 
   elasticsearch:
     image: elasticsearch:9.5.2
@@ -72,6 +82,8 @@ services:
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - gatorplanner
 
   redis:
     image: redis:8.10.2-alpine
@@ -85,6 +97,8 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    networks:
+      - gatorplanner
 
 volumes:
   caddy_data:
@@ -92,3 +106,7 @@ volumes:
   postgres_data:
   elasticsearch_data:
   redis_data:
+
+networks:
+  gatorplanner:
+    name: gatorplanner
