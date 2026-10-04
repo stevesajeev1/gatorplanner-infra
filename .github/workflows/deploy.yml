@@ -30,5 +30,8 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+            chmod +x cron/run-job.sh
+            crontab cron/gatorplanner.crontab
+
             docker compose up -d
             docker compose ps

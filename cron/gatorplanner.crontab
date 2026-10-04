@@ -1,0 +1,16 @@
+# GatorPlanner scheduled jobs
+#
+# Format:
+# minute hour day-of-month month day-of-week command
+
+# Scrape UF data every day at 2:00 AM
+0 2 * * * /opt/projects/gatorplanner/cron/run-job.sh scrape_uf.py spring 27
+
+# Scrape buildings every Sunday at 3:00 AM
+0 3 * * 0 /opt/projects/gatorplanner/cron/run-job.sh scrape_buildings.py
+
+# Scrape RMP every Monday at 3:00 AM
+0 3 * * 1 /opt/projects/gatorplanner/cron/run-job.sh scrape_rmp.py
+
+# Sync Elasticsearch every 6 hours
+0 */6 * * * /opt/projects/gatorplanner/cron/run-job.sh sync-elasticsearch.py spring 27
