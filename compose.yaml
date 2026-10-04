@@ -1,0 +1,94 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    image: ghcr.io/${GITHUB_OWNER}/gatorplanner-web:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      PUBLIC_API_URL: https://api.${DOMAIN}
+
+  api:
+    image: ghcr.io/${GITHUB_OWNER}/gatorplanner-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/db
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      OPTIMIZER_URL: optimizer:50051
+      ALLOWED_ORIGINS: https://${DOMAIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      optimizer:
+        condition: service_started
+
+  optimizer:
+    image: ghcr.io/${GITHUB_OWNER}/gatorplanner-optimizer:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: db
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: elasticsearch:9.5.2
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  redis:
+    image: redis:8.10.2-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  elasticsearch_data:
+  redis_data:
