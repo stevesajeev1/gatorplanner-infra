@@ -1,0 +1,34 @@
+name: Deploy Infra to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          fingerprint: ${{ secrets.PROD_SSH_FINGERPRINT }}
+          script: |
+            set -e
+
+            cd /opt/projects/gatorplanner
+
+            git fetch origin
+            git reset --hard origin/main
+
+            docker compose up -d
+            docker compose ps
